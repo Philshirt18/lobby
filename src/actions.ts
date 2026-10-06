@@ -6,13 +6,14 @@ import { reconcileInvoices } from './indexer'
 
 type HeldRecord = {
   nonce: number
+  memo_text: string
   originator: Address
   receipt: Hex
   status: string
 }
 
 function getHeld(nonce: number): HeldRecord {
-  const row = db.prepare('SELECT nonce, originator, receipt, status FROM held WHERE receiver = ? AND nonce = ?').get(cfg.owner, nonce) as HeldRecord | undefined
+  const row = db.prepare('SELECT nonce, memo_text, originator, receipt, status FROM held WHERE receiver = ? AND nonce = ?').get(cfg.owner, nonce) as HeldRecord | undefined
   if (!row) throw new Error(`No held payment with nonce ${nonce}`)
   if (row.status !== 'held') throw new Error(`Payment ${nonce} is already ${row.status}`)
   return row
@@ -41,9 +42,12 @@ export async function approve(nonce: number, opts: { remember?: boolean; label?:
       functionName: 'modifyPolicyWhitelist',
       args: [cfg.policyId, h.originator, true],
     } as never)
+    // Name the sender after the invoice customer when the memo matches one ("Globex – licence" -> "Globex")
+    const inv = h.memo_text ? (db.prepare('SELECT label FROM invoices WHERE id = ?').get(h.memo_text) as { label: string } | undefined) : undefined
+    const fromInvoice = inv?.label.split(/\s[–-]\s/)[0]?.trim()
     db.prepare('INSERT OR REPLACE INTO known (address, label, added_at) VALUES (?, ?, ?)').run(
       h.originator.toLowerCase(),
-      opts.label?.trim() || `Approved ${h.originator.slice(0, 6)}…${h.originator.slice(-4)}`,
+      opts.label?.trim() || fromInvoice || `Approved ${h.originator.slice(0, 6)}…${h.originator.slice(-4)}`,
       Math.floor(Date.now() / 1000),
     )
   }

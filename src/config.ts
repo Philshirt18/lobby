@@ -16,6 +16,7 @@ export const cfg = {
   policyId: process.env.POLICY_ID ? BigInt(process.env.POLICY_ID) : undefined,
   startBlock: process.env.START_BLOCK ? BigInt(process.env.START_BLOCK) : undefined,
   port: Number(process.env.PORT ?? 8787),
+  demo: process.env.DEMO_MODE === '1',
   dbPath: process.env.DB_PATH ?? 'lobby.db',
   dustUnits: BigInt(process.env.DUST_UNITS ?? 1_000_000), // 1.00 token (6 decimals)
 }

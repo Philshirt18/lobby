@@ -35,4 +35,7 @@ Backend done and verified against the testnet: `pnpm setup` (once), `pnpm start`
   return-to-sender; lookalike dust flagged `reject`; invoices auto-settle.
 - Gotchas: memos must be right-padded bytes32 (`stringToHex(s,{size:32})`); kill the old server before restarting
   (stale process kept the port and a deleted DB).
-- TODO: dashboard in public/, README + architecture diagram, demo video, Telegram (stretch).
+- Dashboard done (public/index.html, no build step): tiles, lobby cards with address comparison, one-click
+  Let in / Let in & remember / Send back, inbox, invoices, known senders, demo controls (DEMO_MODE=1), dark mode, mobile.
+- `pnpm reset` = fresh demo state (new whitelist, empty DB, seed). Then `pnpm start` and open http://localhost:8787.
+- TODO: README + architecture diagram, tests, deploy, demo video, pitch text, Telegram (stretch).

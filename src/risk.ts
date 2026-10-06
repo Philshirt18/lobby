@@ -2,7 +2,7 @@ import { db } from './db'
 import { cfg } from './config'
 
 export type Severity = 'high' | 'medium' | 'low' | 'good'
-export type Flag = { code: string; severity: Severity; text: string }
+export type Flag = { code: string; severity: Severity; text: string; ref?: string }
 export type Recommendation = 'approve' | 'review' | 'reject'
 
 export type HeldRow = {
@@ -54,6 +54,7 @@ export function assess(h: HeldRow): { flags: Flag[]; recommendation: Recommendat
     flags.push({
       code: 'lookalike',
       severity: 'high',
+      ref: lookalike.address,
       text: `Looks like your known sender "${lookalike.label}" (${lookalike.address.slice(0, 6)}…${lookalike.address.slice(-4)}) but is a different address`,
     })
   }

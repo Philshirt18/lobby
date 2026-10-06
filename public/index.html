@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lobby – payment inbox for Tempo</title>
+<meta name="description" content="Payments from unknown senders wait in the lobby until you let them in.">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #f1efe9;
+    --text: #1b1a17;
+    --muted: #6d6a61;
+    --line: #e4e1d8;
+    --accent: #1f5eff;
+    --accent-ink: #ffffff;
+    --good: #14804a;
+    --good-bg: #e3f4ea;
+    --warn: #9a5b00;
+    --warn-bg: #fdf0d5;
+    --bad: #b42318;
+    --bad-bg: #fde7e4;
+    --info: #4a4f5c;
+    --info-bg: #eceef3;
+    --shadow: 0 1px 2px rgba(20, 18, 10, .06), 0 4px 16px rgba(20, 18, 10, .04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121210;
+      --surface: #1b1b18;
+      --surface-2: #242420;
+      --text: #f0eee7;
+      --muted: #a09d92;
+      --line: #2e2d28;
+      --accent: #6b93ff;
+      --accent-ink: #0b1020;
+      --good: #5ccf93;
+      --good-bg: #16301f;
+      --warn: #f0b755;
+      --warn-bg: #3a2c10;
+      --bad: #ff8a7d;
+      --bad-bg: #3d1a16;
+      --info: #b4b8c4;
+      --info-bg: #26282e;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px 64px; }
+
+  header.top {
+    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between;
+    padding: 20px 0 8px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px; background: var(--text); color: var(--bg);
+    display: grid; place-items: center; font-weight: 800; font-size: 18px;
+  }
+  .brand h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .brand p { margin: 0; color: var(--muted); font-size: 13px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.live { background: var(--good); box-shadow: 0 0 0 3px var(--good-bg); }
+  .dot.down { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-bg); }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 16px 0 24px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .tile .label { font-size: 12.5px; color: var(--muted); }
+  .tile .value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-top: 2px; }
+  .tile .sub { font-size: 12.5px; color: var(--muted); }
+  .tile.alert .value { color: var(--bad); }
+
+  .grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start; }
+  section.panel { margin-bottom: 20px; }
+  .panel > h2 { font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .panel > .hint { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; }
+  .count {
+    font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted);
+  }
+  .count.hot { background: var(--bad-bg); color: var(--bad); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+    box-shadow: var(--shadow); margin-bottom: 12px;
+  }
+  .card.reject { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+  .card.approve { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .amount { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .amount small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 4px; }
+  .age { color: var(--muted); font-size: 12.5px; }
+  .from { margin-top: 6px; font-size: 13.5px; color: var(--muted); }
+  .addr { font-size: 13px; word-break: break-all; }
+  .memo { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); font-size: 12.5px; }
+  .memo.empty { color: var(--muted); font-style: italic; }
+
+  .compare {
+    margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--bad-bg);
+    border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent);
+  }
+  .compare .title { font-size: 12.5px; font-weight: 600; color: var(--bad); margin-bottom: 6px; }
+  .compare .line { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; margin: 2px 0; }
+  .compare .line .tag { width: 64px; flex: none; color: var(--muted); }
+  .compare .addr { font-size: 12.5px; }
+  .compare .m { background: color-mix(in srgb, var(--bad) 28%, transparent); border-radius: 3px; padding: 0 1px; font-weight: 700; }
+
+  .flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .pill { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid transparent; }
+  .pill.high { background: var(--bad-bg); color: var(--bad); }
+  .pill.medium { background: var(--warn-bg); color: var(--warn); }
+  .pill.low { background: var(--info-bg); color: var(--info); }
+  .pill.good { background: var(--good-bg); color: var(--good); }
+
+  .reco { margin-top: 12px; font-size: 13.5px; }
+  .reco b.approve { color: var(--good); } .reco b.reject { color: var(--bad); } .reco b.review { color: var(--warn); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  button, .btn {
+    font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 8px 14px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--text); min-height: 38px;
+  }
+  button:hover { background: var(--surface-2); }
+  button:disabled { opacity: .55; cursor: progress; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  button.danger { color: var(--bad); }
+  button.small { font-size: 13px; padding: 5px 10px; min-height: 30px; }
+
+  .list { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .item { display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .item .l { min-width: 0; }
+  .item .t { font-weight: 600; font-size: 14px; }
+  .item .s { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .item .r { text-align: right; flex: none; }
+  .item .r .a { font-weight: 600; }
+  .status { font-size: 12px; font-weight: 600; }
+  .status.approved, .status.paid { color: var(--good); }
+  .status.returned { color: var(--warn); }
+  .status.open { color: var(--muted); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .empty-state {
+    text-align: center; padding: 28px 16px; color: var(--muted); background: var(--surface);
+    border: 1px dashed var(--line); border-radius: 14px;
+  }
+  .empty-state b { display: block; color: var(--text); font-size: 15px; margin-bottom: 2px; }
+
+  form.inline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  input {
+    font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--text); min-height: 38px; min-width: 0;
+  }
+  input.grow { flex: 1 1 140px; }
+  input.narrow { flex: 0 1 90px; }
+
+  details.resolved { margin-top: 4px; }
+  details.resolved summary { cursor: pointer; color: var(--muted); font-size: 13.5px; padding: 6px 0; }
+
+  .demo {
+    margin-top: 28px; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); border: 1px dashed var(--line);
+  }
+  .demo h3 { margin: 0 0 4px; font-size: 14px; }
+  .demo p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+  .demo .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  footer { margin-top: 28px; color: var(--muted); font-size: 12.5px; }
+  #toasts { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; gap: 8px; z-index: 10; width: min(92vw, 420px); }
+  .toast {
+    padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--bg); font-size: 14px; box-shadow: var(--shadow);
+  }
+  .toast.err { background: var(--bad); color: #fff; }
+
+  @media (max-width: 860px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .card, .item { transition: border-color .2s; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">L</div>
+      <div>
+        <h1>Lobby</h1>
+        <p>Unknown senders wait here until you let them in.</p>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="chip"><span class="dot" id="dot"></span><span id="sync">connecting…</span></span>
+      <span class="chip">Tempo testnet</span>
+      <span class="chip mono" id="owner" title="Receiving account"></span>
+    </div>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid">
+    <div>
+      <section class="panel">
+        <h2>The lobby <span class="count" id="heldCount">0</span></h2>
+        <p class="hint">Payments your receive policy held back. Nothing here has touched your balance.</p>
+        <div id="held"></div>
+        <details class="resolved" id="resolvedBox" hidden>
+          <summary>Resolved <span id="resolvedCount"></span></summary>
+          <div class="list" id="resolved"></div>
+        </details>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>Inbox <span class="count" id="inCount">0</span></h2>
+        <p class="hint">Credited straight away because the sender is on your list.</p>
+        <div id="inbox"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Invoices <span class="count" id="invCount">0</span></h2>
+        <p class="hint">A payment whose memo matches an open invoice is recommended for approval.</p>
+        <div id="invoices"></div>
+        <form class="inline" id="invoiceForm" autocomplete="off">
+          <input class="grow mono" name="id" placeholder="INV-1044" maxlength="32" required aria-label="Invoice number (used as memo)">
+          <input class="grow" name="label" placeholder="Customer – description" aria-label="Description">
+          <input class="narrow" name="amount" type="number" step="0.01" min="0.01" placeholder="Amount" required aria-label="Amount">
+          <button class="small primary" type="submit">Add</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Known senders <span class="count" id="knownCount">0</span></h2>
+        <p class="hint">Lookalikes of these addresses are flagged.</p>
+        <div id="known"></div>
+        <form class="inline" id="knownForm" autocomplete="off">
+          <input class="grow mono" name="address" placeholder="0x…" pattern="0x[0-9a-fA-F]{40}" required aria-label="Address">
+          <input class="grow" name="label" placeholder="Label" aria-label="Label">
+          <button class="small" type="submit">Add</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <div class="demo" id="demo" hidden>
+    <h3>Demo controls</h3>
+    <p>Plays the other side of the table with testnet wallets. Only visible when the server runs with DEMO_MODE=1.</p>
+    <div class="btns">
+      <button data-demo="customer">Known customer pays INV-1043</button>
+      <button data-demo="stranger">New company pays INV-2001</button>
+      <button data-demo="poison" class="danger">Poisoning attempt</button>
+      <button data-demo="spam">Unknown sender, odd amount</button>
+    </div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+const EXPLORER = 'https://explore.testnet.tempo.xyz'
+const $ = (s) => document.querySelector(s)
+let state = null
+const busy = new Set()
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const money = (units) => (Number(units) / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const short = (a) => a.slice(0, 6) + '…' + a.slice(-4)
+const txLink = (h, text = 'tx') => `<a href="${EXPLORER}/tx/${esc(h)}" target="_blank" rel="noopener">${text} ↗</a>`
+
+function ago(ts) {
+  const s = Math.max(0, Math.floor(Date.now() / 1000) - Number(ts))
+  if (s < 60) return s + 's ago'
+  if (s < 3600) return Math.floor(s / 60) + ' min ago'
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago'
+  return Math.floor(s / 86400) + ' d ago'
+}
+
+function toast(msg, err = false) {
+  const el = document.createElement('div')
+  el.className = 'toast' + (err ? ' err' : '')
+  el.textContent = msg
+  $('#toasts').append(el)
+  setTimeout(() => el.remove(), err ? 6000 : 3200)
+}
+
+function label(addr) {
+  const k = (state?.known ?? []).find((k) => k.address.toLowerCase() === addr.toLowerCase())
+  return k ? k.label : null
+}
+
+/** Marks the leading/trailing characters two addresses share, which is what a poisoner imitates. */
+function diffAddr(addr, ref) {
+  const a = addr.toLowerCase().slice(2), r = ref.toLowerCase().slice(2)
+  let p = 0, s = 0
+  while (p < a.length && a[p] === r[p]) p++
+  while (s < a.length - p && a[a.length - 1 - s] === r[r.length - 1 - s]) s++
+  const raw = addr.slice(2)
+  return `0x<span class="m">${esc(raw.slice(0, p))}</span>${esc(raw.slice(p, raw.length - s))}<span class="m">${esc(raw.slice(raw.length - s))}</span>`
+}
+
+function renderTiles() {
+  const held = state.held.filter((h) => h.status === 'held')
+  const heldSum = held.reduce((n, h) => n + Number(h.amount), 0)
+  const caught = state.held.filter((h) => h.flags.some((f) => f.code === 'lookalike')).length
+  const open = state.invoices.filter((i) => i.status === 'open')
+  const openSum = open.reduce((n, i) => n + Number(i.amount), 0)
+  const tile = (cls, l, v, s) => `<div class="tile ${cls}"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`
+  $('#tiles').innerHTML =
+    tile('', 'Balance', state.balance == null ? '–' : money(state.balance), 'AlphaUSD, only clean money') +
+    tile('', 'In the lobby', held.length, money(heldSum) + ' waiting for you') +
+    tile(caught ? 'alert' : '', 'Lookalikes caught', caught, 'address-poisoning attempts') +
+    tile('', 'Open invoices', open.length, money(openSum) + ' expected')
+}
+
+function heldCard(h) {
+  const isBusy = busy.has(h.nonce)
+  const known = label(h.originator)
+  const lookalike = h.flags.find((f) => f.code === 'lookalike')
+  const cls = h.recommendation === 'reject' ? 'reject' : h.recommendation === 'approve' ? 'approve' : ''
+  const memo = h.memo_text ? `<span class="memo mono">${esc(h.memo_text)}</span>` : `<span class="memo empty">no memo</span>`
+  const compare = lookalike
+    ? `<div class="compare">
+         <div class="title">Imitates ${esc(label(lookalike.ref) ?? 'a known sender')}</div>
+         <div class="line"><span class="tag">This one</span><span class="addr mono">${diffAddr(h.originator, lookalike.ref)}</span></div>
+         <div class="line"><span class="tag">Real one</span><span class="addr mono">${diffAddr(lookalike.ref, h.originator)}</span></div>
+       </div>`
+    : `<div class="from">From <span class="addr mono">${esc(h.originator)}</span>${known ? ` · ${esc(known)}` : ''}</div>`
+  const flags = h.flags.map((f) => `<span class="pill ${esc(f.severity)}">${esc(f.text)}</span>`).join('')
+  const reco = {
+    approve: '<b class="approve">Recommended: let in.</b> Memo and amount match an open invoice.',
+    reject: '<b class="reject">Recommended: send back.</b> Do not copy this address.',
+    review: '<b class="review">Needs your review.</b> Nothing marks it as safe or dangerous.',
+  }[h.recommendation]
+  const dis = isBusy ? 'disabled' : ''
+  return `<article class="card ${cls}" data-nonce="${h.nonce}">
+    <div class="row"><div class="amount">${money(h.amount)}<small>AlphaUSD</small></div><div class="age">${ago(h.blocked_at)} · ${txLink(h.tx_hash, 'held')}</div></div>
+    ${compare}
+    <div>${memo}</div>
+    ${flags ? `<div class="flags">${flags}</div>` : ''}
+    <div class="reco">${reco ?? ''}</div>
+    <div class="actions">
+      <button class="${h.recommendation === 'approve' ? 'primary' : ''}" data-act="approve" data-nonce="${h.nonce}" ${dis}>${isBusy ? 'Working…' : 'Let in'}</button>
+      <button data-act="remember" data-nonce="${h.nonce}" ${dis} title="Let it in and put the sender on your list, so future payments arrive directly">Let in &amp; remember sender</button>
+      <button class="${h.recommendation === 'reject' ? 'primary' : 'danger'}" data-act="return" data-nonce="${h.nonce}" ${dis}>Send back</button>
+    </div>
+  </article>`
+}
+
+function renderHeld() {
+  const held = state.held.filter((h) => h.status === 'held')
+  $('#heldCount').textContent = held.length
+  $('#heldCount').classList.toggle('hot', held.length > 0)
+  $('#held').innerHTML = held.length
+    ? held.map(heldCard).join('')
+    : `<div class="empty-state"><b>The lobby is empty</b>Payments from senders you don't know will appear here.</div>`
+
+  const done = state.held.filter((h) => h.status !== 'held')
+  $('#resolvedBox').hidden = done.length === 0
+  $('#resolvedCount').textContent = done.length ? `(${done.length})` : ''
+  $('#resolved').innerHTML = done.slice(0, 12).map((h) => `
+    <div class="item">
+      <div class="l"><div class="t">${money(h.amount)} <span class="status ${esc(h.status)}">${h.status === 'approved' ? 'let in' : 'sent back'}</span></div>
+      <div class="s mono">${esc(short(h.originator))}${h.memo_text ? ' · ' + esc(h.memo_text) : ''}${h.flags.some((f) => f.code === 'lookalike') ? ' · lookalike' : ''}</div></div>
+      <div class="r"><div class="s">${ago(h.blocked_at)}</div>${h.resolved_tx ? `<div class="s">${txLink(h.resolved_tx, 'resolved')}</div>` : ''}</div>
+    </div>`).join('')
+}
+
+function renderInbox() {
+  $('#inCount').textContent = state.credited.length
+  $('#inbox').innerHTML = state.credited.length
+    ? `<div class="list">${state.credited.slice(0, 8).map((c) => {
+        const who = label(c.from_addr)
+        return `<div class="item">
+          <div class="l"><div class="t">${esc(who ?? short(c.from_addr))}</div>
+          <div class="s mono">${who ? esc(short(c.from_addr)) + ' · ' : ''}${c.memo_text ? esc(c.memo_text) : 'no memo'}</div></div>
+          <div class="r"><div class="a">+${money(c.amount)}</div><div class="s">${txLink(c.tx_hash)}</div></div>
+        </div>`
+      }).join('')}</div>`
+    : `<div class="empty-state"><b>Nothing yet</b>Payments from known senders show up here.</div>`
+}
+
+function renderInvoices() {
+  $('#invCount').textContent = state.invoices.length
+  $('#invoices').innerHTML = state.invoices.length
+    ? `<div class="list">${state.invoices.map((i) => `
+        <div class="item">
+          <div class="l"><div class="t mono">${esc(i.id)}</div><div class="s">${esc(i.label)}</div></div>
+          <div class="r"><div class="a">${money(i.amount)}</div><div class="status ${esc(i.status)}">${i.status === 'paid' ? 'paid ' + (i.paid_tx ? txLink(i.paid_tx, '') : '') : 'open'}</div></div>
+        </div>`).join('')}</div>`
+    : `<div class="empty-state"><b>No invoices</b>Add one below. The number is the memo your customer pays with.</div>`
+}
+
+function renderKnown() {
+  $('#knownCount').textContent = state.known.length
+  $('#known').innerHTML = state.known.length
+    ? `<div class="list">${state.known.map((k) => `
+        <div class="item"><div class="l"><div class="t">${esc(k.label)}</div><div class="s mono">${esc(k.address)}</div></div></div>`).join('')}</div>`
+    : `<div class="empty-state"><b>No known senders</b>Add the addresses you regularly receive money from.</div>`
+}
+
+function render() {
+  $('#owner').textContent = short(state.owner)
+  $('#owner').title = 'Receiving account ' + state.owner
+  $('#sync').textContent = state.syncedBlock ? 'live · block ' + Number(state.syncedBlock).toLocaleString('en-US') : 'live'
+  $('#dot').className = 'dot live'
+  $('#demo').hidden = !state.demo
+  $('#footer').innerHTML = `Approvals are signed by the desk key <span class="mono">${esc(short(state.desk))}</span>, which can only release held payments and edit the sender list, never spend your balance. Receive policy #${esc(state.policyId ?? '–')}.`
+  renderTiles(); renderHeld(); renderInbox(); renderInvoices(); renderKnown()
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/state')
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    state = await r.json()
+    render()
+  } catch (e) {
+    $('#dot').className = 'dot down'
+    $('#sync').textContent = 'offline – retrying'
+  }
+}
+
+async function post(url, body) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body ?? {}) })
+  const j = await r.json().catch(() => ({ ok: false, error: 'Unexpected response' }))
+  if (!j.ok) throw new Error(j.error || 'Request failed')
+  return j
+}
+
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act], button[data-demo]')
+  if (!btn) return
+  if (btn.dataset.demo) {
+    btn.disabled = true
+    const old = btn.textContent
+    btn.textContent = 'Sending…'
+    try { await post('/api/demo/' + btn.dataset.demo); toast('Payment sent. It shows up in a few seconds.') }
+    catch (err) { toast(err.message, true) }
+    btn.disabled = false; btn.textContent = old
+    setTimeout(load, 3500)
+    return
+  }
+  const nonce = Number(btn.dataset.nonce)
+  const act = btn.dataset.act
+  busy.add(nonce); render()
+  try {
+    if (act === 'return') { await post(`/api/held/${nonce}/return`); toast('Sent back to the sender.') }
+    else if (act === 'remember') {
+      await post(`/api/held/${nonce}/approve`, { remember: true })
+      toast('Let in. Future payments from this sender arrive directly.')
+    } else { await post(`/api/held/${nonce}/approve`); toast('Let in. The payment is now in your balance.') }
+  } catch (err) { toast(err.message, true) }
+  busy.delete(nonce)
+  await load()
+})
+
+$('#invoiceForm').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const f = new FormData(e.target)
+  try { await post('/api/invoices', { id: f.get('id'), label: f.get('label'), amount: f.get('amount') }); e.target.reset(); toast('Invoice added.'); load() }
+  catch (err) { toast(err.message, true) }
+})
+$('#knownForm').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const f = new FormData(e.target)
+  try { await post('/api/known', { address: f.get('address'), label: f.get('label') }); e.target.reset(); toast('Sender added.'); load() }
+  catch (err) { toast(err.message, true) }
+})
+
+load()
+setInterval(() => { if (!document.hidden) load() }, 2000)
+</script>
+</body>
+</html>

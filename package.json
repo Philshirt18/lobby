@@ -37,5 +37,6 @@
   "license": "MIT",
   "engines": {
     "node": ">=20"
-  }
+  },
+  "packageManager": "pnpm@12.9.1"
 }

@@ -164,7 +164,7 @@
   form.add { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-end; margin-top: 14px; }
   form.add label { display: grid; gap: 2px; flex: 1 1 110px; min-width: 0; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
   form.add label.narrow { flex: 0 1 84px; }
-  input { font: 400 15px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--ink); padding: 6px 0; min-width: 0; border-radius: 0; }
+  input { font: 400 15px var(--sans); letter-spacing: 0; text-transform: none; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--ink); padding: 6px 0; min-width: 0; border-radius: 0; height: 36px; }
   input.mono { font-family: var(--mono); font-size: 13px; }
   input::placeholder { color: var(--muted); opacity: .7; }
 
@@ -186,12 +186,19 @@
 
   @media (max-width: 900px) {
     .cols { grid-template-columns: 1fr; }
-    .figures { grid-template-columns: 1fr 1fr; }
-    .fig:nth-child(3) { border-left: 0; padding-left: 0; }
-    .fig:nth-child(n+3) { border-top: 1px solid var(--rule); }
+    .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .fig { padding: 14px 10px 14px 0; min-width: 0; }
+    .fig + .fig { padding-left: 12px; }
+    .fig.first { grid-column: 1 / -1; border-bottom: 1px solid var(--rule); padding-right: 0; }
+    .fig.first + .fig { border-left: 0; padding-left: 0; }
+    .fig .v { font-size: 30px; overflow-wrap: anywhere; }
+    .fig.first .v { font-size: 42px; }
     .status { text-align: left; }
   }
   @media (max-width: 520px) {
+    .fig .v { font-size: 25px; }
+    .fig.first .v { font-size: 38px; }
+    .fig .d { font-size: 12.5px; }
     .amt { font-size: 38px; }
     .docket .body { padding: 16px 16px 16px 14px; }
     .specimen .ln { grid-template-columns: 1fr; gap: 0; }
@@ -239,3 +246,20 @@ form.add.stack label { flex: none; }
 .stage { margin-top: 34px; }
 .past ul { margin-top: 6px; }
 @media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } .steps li { flex-direction: column; align-items: stretch; } }
+
+.ledger.plain li { justify-content: space-between; }
+.ledger.plain .who { flex: 1 1 auto; }
+.ledger.plain .who small { overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  form.add { flex-direction: column; align-items: stretch; }
+  form.add label, form.add label.narrow { flex: 1 1 auto; width: 100%; }
+  form.add .btn { align-self: flex-start; }
+}
+@media (max-width: 520px) {
+  .ledger.plain .who small { font-size: 11px; letter-spacing: -0.01em; }
+}
+
+.explainer { margin: 14px 0 6px; padding: 14px 16px; border-left: 3px solid var(--rule); background: var(--paper-2); font-size: 14.5px; }
+.explainer p { margin: 0 0 8px; }
+.explainer ol { margin: 0; padding-left: 20px; color: var(--ink-2); }
+.explainer li { margin: 2px 0; }

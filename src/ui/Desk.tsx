@@ -319,7 +319,7 @@ export function Desk({ account, lobby, balance, refreshBalance }: Props) {
             </ul>
             <form className="add" onSubmit={addInvoice} autoComplete="off">
               <label>Invoice no.<input className="mono" name="id" placeholder="INV-1044" maxLength={32} required /></label>
-              <label>Customer – note<input name="label" placeholder="Initech – retainer" /></label>
+              <label>Customer<input name="label" placeholder="Initech – retainer" /></label>
               <label className="narrow">Amount<input name="amount" type="number" step="0.01" min="0.01" placeholder="0.00" required /></label>
               <button className="btn small" type="submit">Enter</button>
             </form>
@@ -330,7 +330,7 @@ export function Desk({ account, lobby, balance, refreshBalance }: Props) {
               <span className="r">IV.</span> Guest list <span className="n">{state.guests.length || ''}</span>
             </h2>
             <p className="sub">Guests are paid in directly. Look-alikes of them, and of anyone you ever paid, raise the alarm.</p>
-            <ul className="ledger">
+            <ul className="ledger plain">
               {state.guests.length === 0 && (
                 <li>
                   <div className="who"><small className="empty">The list is empty.</small></div>
@@ -342,14 +342,17 @@ export function Desk({ account, lobby, balance, refreshBalance }: Props) {
                     <b>{g.label}</b>
                     <small>{g.address}</small>
                   </div>
-                  <span className="lead" />
                   <div className="val">
                     <small><button className="linkish" disabled={guestBusy} onClick={() => removeGuest(g.address)}>remove</button></small>
                   </div>
                 </li>
               ))}
             </ul>
-            <p className="note">{state.counterparties.length} {state.counterparties.length === 1 ? 'address' : 'addresses'} you have paid are watched for look-alikes automatically.</p>
+            <p className="note">
+              {state.counterparties.length === 0
+                ? 'Everyone you pay from this account is watched for look-alikes automatically.'
+                : `${state.counterparties.length} ${state.counterparties.length === 1 ? 'address' : 'addresses'} you have paid ${state.counterparties.length === 1 ? 'is' : 'are'} watched for look-alikes automatically.`}
+            </p>
             <form className="add" onSubmit={addGuest} autoComplete="off">
               <label>Address<input className="mono" name="address" placeholder="0x…" required /></label>
               <label>Name<input name="label" placeholder="Name" /></label>

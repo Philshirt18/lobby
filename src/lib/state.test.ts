@@ -4,6 +4,7 @@ import { decisionLogCsv } from './csv'
 import { ago, money, toUnits } from './format'
 import { memoToText, textToMemo } from './memo'
 import { applyActivity, emptyState, isPrecompile, reconcileInvoices } from './state'
+import { normalize } from './store'
 import type { Activity, LobbyState } from './types'
 
 const OWNER = '0xbefc23124939b9f72e8e6491c340ff3602d3e634' as const
@@ -176,5 +177,28 @@ describe('helpers', () => {
     expect(ago(1_000_000_000 - 30, now)).toBe('just now')
     expect(ago(1_000_000_000 - 300, now)).toBe('5 min ago')
     expect(ago(1_000_000_000 - 7200, now)).toBe('2 h ago')
+  })
+})
+
+describe('normalize (cache written by an older version)', () => {
+  it('fills in fields that were added later instead of crashing', () => {
+    const old = {
+      version: 1,
+      setup: { policyId: '1', block: 5 },
+      cursor: 10,
+      held: [{ nonce: 1, amount: '1', originator: SENDER, memo: null, memoText: '', blockedAt: 1, txHash: '0x1', block: 1, receipt: '0x', status: 'held' }],
+      credited: [{ id: 'a', txHash: '0x2', from: SENDER, amount: '1', memoText: '', block: 1 }],
+    }
+    const s = normalize(old)
+    expect(s.held[0].token).toBe('0x20c0000000000000000000000000000000000001')
+    expect(s.credited[0].ts).toBe(0)
+    expect(s.invoices).toEqual([])
+    expect(s.guests).toEqual([])
+    expect(s.setup).toEqual({ policyId: '1', block: 5 })
+  })
+  it('falls back to an empty state for junk or other versions', () => {
+    expect(normalize(null)).toEqual(emptyState())
+    expect(normalize('nope')).toEqual(emptyState())
+    expect(normalize({ version: 99 })).toEqual(emptyState())
   })
 })

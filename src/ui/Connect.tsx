@@ -32,6 +32,20 @@ export function Connect({ intro }: { intro?: string }) {
         <span className="r">§</span> Sign in at the desk
       </h2>
       <p className="sub">{intro ?? 'Your account is a passkey on this device. No extension, no seed phrase, nobody holds your keys.'}</p>
+      {!intro && (
+        <div className="explainer">
+          <p>
+            <b>What is this?</b> On a blockchain anyone can send anything to your address, and you cannot say no. Attackers abuse that with look-alike
+            addresses. Lobby uses Tempo's receive policies: payments from senders you don't know are <em>held</em> and wait here, until you admit them
+            or send them back.
+          </p>
+          <ol>
+            <li>Sign in and get test money.</li>
+            <li>Open your lobby (two transactions).</li>
+            <li>Press "Set the scene" at the bottom and watch a regular, a newcomer and an impostor arrive.</li>
+          </ol>
+        </div>
+      )}
       <div className="acts">
         <button className="btn solid" disabled={isPending || !passkey} onClick={() => go('register')}>
           Create account with a passkey

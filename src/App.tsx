@@ -42,7 +42,10 @@ export function App() {
       {body}
       <footer>
         Lobby is non-custodial: every decision is signed by your own account and the network enforces it. This build runs on the Tempo
-        testnet and keeps names and invoices only in this browser.
+        testnet and keeps names and invoices only in this browser.{' '}
+        <a href="https://github.com/Philshirt18/lobby" target="_blank" rel="noopener noreferrer">
+          Open source (MIT) ↗
+        </a>
       </footer>
     </div>
   )

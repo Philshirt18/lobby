@@ -5,12 +5,12 @@ import { pub, useWallet } from '../hooks/useChain'
 import { useToast } from '../hooks/useToast'
 import { fundFromFaucet, setupLobby } from '../lib/actions'
 import { errorText } from '../lib/errors'
-import { money } from '../lib/format'
+import { money, short } from '../lib/format'
 import type { SetupInfo } from '../lib/indexer'
 import { chain } from '../lib/network'
 
 /** Two steps: get test money for fees, then open the lobby (creates the guest list and sets the receive policy). */
-export function Setup({ onDone }: { onDone: (info: SetupInfo) => void }) {
+export function Setup({ onDone, foreign }: { onDone: (info: SetupInfo) => void; foreign: string | null }) {
   const { address } = useAccount()
   const wallet = useWallet()
   const { balance, refresh } = useBalance(address, 2500)
@@ -52,7 +52,13 @@ export function Setup({ onDone }: { onDone: (info: SetupInfo) => void }) {
       <h2>
         <span className="r">§</span> Open your lobby
       </h2>
-      <p className="sub">Two steps, about a minute. Everything is signed with your passkey.</p>
+      <p className="sub">Two steps, about a minute. Everything is signed with your own account.</p>
+      {foreign && (
+        <p className="errtext">
+          Heads up: this account already has a receive policy that {short(foreign)} manages. Opening the lobby replaces it, and held payments
+          under the old policy stay with that address.
+        </p>
+      )}
       <ol className="steps">
         <li className={funded ? 'done' : ''}>
           <div>

@@ -5,6 +5,8 @@ export type HeldStatus = 'held' | 'approved' | 'returned'
 /** A payment the receive policy kept in the guard. */
 export type HeldItem = {
   nonce: number
+  /** The TIP-20 token that was held. Everything but AlphaUSD is shown with its address. */
+  token: Address
   amount: string
   originator: Address
   memo: Hex | null

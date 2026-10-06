@@ -3,7 +3,7 @@ import type { Address } from 'viem'
 import type { useLobby } from '../hooks/useLobby'
 import { pub } from '../hooks/useChain'
 import { useToast } from '../hooks/useToast'
-import { setGuest, type Wallet } from '../lib/actions'
+import { setGuest, setGuests, type Wallet } from '../lib/actions'
 import { playScenario, type Scenario } from '../lib/demo'
 import { errorText } from '../lib/errors'
 import { FIXTURES } from '../lib/fixtures'
@@ -47,6 +47,26 @@ export function Stage({ account, lobby, wallet, policyId }: Props) {
     setRunning(null)
   }
 
+  /** Take every demo character off the guest list again, so the story can be played from the start. */
+  async function clearScene() {
+    if (!wallet) return toast('Your account is not ready yet.', true)
+    setRunning('clear')
+    try {
+      const cast = Object.values(FIXTURES).map((f) => f.address)
+      await setGuests(wallet, pub, policyId, cast, false)
+      const isCast = (a: string) => cast.some((c) => c.toLowerCase() === a.toLowerCase())
+      update((s) => ({
+        ...s,
+        guests: s.guests.filter((g) => !isCast(g.address)),
+        invoices: s.invoices.filter((i) => i.id !== 'INV-1043' && i.id !== 'INV-2001'),
+      }))
+      toast('The scene is cleared. Everyone is a stranger again.')
+    } catch (e) {
+      toast(errorText(e), true)
+    }
+    setRunning(null)
+  }
+
   async function play(id: Scenario) {
     setRunning(id)
     try {
@@ -72,6 +92,9 @@ export function Stage({ account, lobby, wallet, policyId }: Props) {
       <div className="btns">
         <button className="btn small solid" disabled={running !== null} onClick={loadDemo}>
           {running === 'load' ? 'Signing…' : hasRegular ? 'Scene is set' : 'Set the scene'}
+        </button>
+        <button className="btn small" disabled={running !== null} onClick={clearScene} title="Take the demo characters off your guest list again">
+          {running === 'clear' ? 'Signing…' : 'Clear the scene'}
         </button>
         {BUTTONS.map((b) => (
           <button key={b.id} className={'btn small ' + (b.red ? 'red' : '')} disabled={running !== null} onClick={() => play(b.id)} title={b.hint}>

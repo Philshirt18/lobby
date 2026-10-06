@@ -17,8 +17,8 @@ export const MAX_RANGE = 90_000n
 export async function fetchActivity(client: Pub, owner: Address, fromBlock: bigint, toBlock: bigint): Promise<Activity> {
   const range = { fromBlock, toBlock }
   const [blocked, claimed, inbound, memos, outbound] = await Promise.all([
-    client.getLogs({ address: GUARD, event: events.blocked, args: { token: TOKEN, receiver: owner }, ...range }),
-    client.getLogs({ address: GUARD, event: events.claimed, args: { token: TOKEN, receiver: owner }, ...range }),
+    client.getLogs({ address: GUARD, event: events.blocked, args: { receiver: owner }, ...range }),
+    client.getLogs({ address: GUARD, event: events.claimed, args: { receiver: owner }, ...range }),
     client.getLogs({ address: TOKEN, event: events.transfer, args: { to: owner }, ...range }),
     client.getLogs({ address: TOKEN, event: events.withMemo, args: { to: owner }, ...range }),
     client.getLogs({ address: TOKEN, event: events.transfer, args: { from: owner }, ...range }),
@@ -81,20 +81,47 @@ export async function fetchActivityChunked(
 
 export type SetupInfo = { policyId: string; block: number }
 
+export type OnchainPolicy =
+  | { state: 'none' }
+  /** Somebody else (another address) is the recovery authority: this app could not release held payments. */
+  | { state: 'foreign'; authority: Address }
+  | { state: 'mine'; policyId: string }
+
+/** The registry knows each account's receive policy; no log search needed to find it again on a new device. */
+export async function readPolicy(client: Pub, owner: Address): Promise<OnchainPolicy> {
+  const [has, senderPolicyId, , , , authority] = (await client.readContract({
+    address: REGISTRY,
+    abi: ABI.registry,
+    functionName: 'receivePolicy',
+    args: [owner],
+  })) as readonly [boolean, bigint, number, bigint, number, Address]
+  if (!has) return { state: 'none' }
+  if (authority.toLowerCase() !== owner.toLowerCase()) return { state: 'foreign', authority }
+  return { state: 'mine', policyId: senderPolicyId.toString() }
+}
+
 /**
- * Find the owner's current receive policy on a fresh device by walking back through
- * `ReceivePolicyUpdated` events (about 14 hours of blocks per request).
+ * How far back does this account's history go? Walk back through `ReceivePolicyUpdated` events (about 14 hours of
+ * blocks per request, a few in parallel) and return the earliest one in reach. Without any, start at the
+ * edge of the window: older payments are not shown on a fresh device.
  */
-export async function findSetup(client: Pub, owner: Address, head: bigint, maxBlocksBack = 2_000_000n): Promise<SetupInfo | null> {
+export async function findHistoryStart(client: Pub, owner: Address, head: bigint, maxBlocksBack = 2_000_000n): Promise<number> {
   const floor = head > maxBlocksBack ? head - maxBlocksBack : 0n
+  const ranges: [bigint, bigint][] = []
   for (let to = head; to >= floor; to -= MAX_RANGE) {
-    const from = to - MAX_RANGE + 1n > floor ? to - MAX_RANGE + 1n : floor
-    const logs = await client.getLogs({ address: REGISTRY, event: events.policySet, args: { account: owner }, fromBlock: from, toBlock: to })
-    const last = logs[logs.length - 1]
-    if (last) return { policyId: String(last.args.senderPolicyId), block: Number(last.blockNumber) }
-    if (from === floor) break
+    ranges.push([to - MAX_RANGE + 1n > floor ? to - MAX_RANGE + 1n : floor, to])
+    if (to - MAX_RANGE < floor) break
   }
-  return null
+  let earliest: number | null = null
+  for (let i = 0; i < ranges.length; i += 4) {
+    const batch = await Promise.all(
+      ranges.slice(i, i + 4).map(([from, to]) =>
+        client.getLogs({ address: REGISTRY, event: events.policySet, args: { account: owner }, fromBlock: from, toBlock: to }),
+      ),
+    )
+    for (const logs of batch) for (const l of logs) earliest = Math.min(earliest ?? Infinity, Number(l.blockNumber))
+  }
+  return earliest ?? Number(floor)
 }
 
 /**

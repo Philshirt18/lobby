@@ -1,6 +1,6 @@
 import type { Address } from 'viem'
-import { ago, money } from '../lib/format'
-import { EXPLORER } from '../lib/network'
+import { ago, money, short } from '../lib/format'
+import { EXPLORER, TOKEN } from '../lib/network'
 import type { Assessment } from '../lib/risk'
 import type { HeldItem } from '../lib/types'
 
@@ -65,7 +65,7 @@ export function Docket({ item: h, assessment: a, guestName, working, disabled, n
         <div className="head">
           <div className="amt num">
             {money(h.amount)}
-            <small>AlphaUSD</small>
+            <small>{h.token.toLowerCase() === TOKEN ? 'AlphaUSD' : `token ${short(h.token)}`}</small>
           </div>
           <div className="when">
             {ago(h.blockedAt, now)} · <TxLink hash={h.txHash} label="held" />

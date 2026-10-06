@@ -1,5 +1,6 @@
 import type { Address } from 'viem'
-import { money } from './format'
+import { money, short } from './format'
+import { TOKEN } from './network'
 import type { Counterparty, Flag, Guest, HeldItem, Invoice, Recommendation } from './types'
 
 const hex = (a: string) => a.toLowerCase().replace(/^0x/, '')
@@ -64,6 +65,11 @@ export function assess(h: HeldItem, ctx: RiskContext): Assessment {
     })
   }
 
+  const otherToken = h.token.toLowerCase() !== TOKEN
+  if (otherToken) {
+    flags.push({ code: 'other_token', severity: 'medium', text: `Paid in a token other than AlphaUSD (${short(h.token)}). Unsolicited tokens are a common lure.` })
+  }
+
   if (BigInt(h.amount) < ctx.dustUnits) {
     flags.push({ code: 'dust', severity: 'medium', text: 'Tiny amount, typical of poisoning or tracking attempts' })
   }
@@ -75,7 +81,7 @@ export function assess(h: HeldItem, ctx: RiskContext): Assessment {
   }
 
   let invoiceExact = false
-  if (h.memoText) {
+  if (h.memoText && !otherToken) {
     const inv = ctx.invoices.find((i) => i.id === h.memoText)
     if (inv && inv.status === 'open') {
       if (BigInt(h.amount) === BigInt(inv.amount)) {

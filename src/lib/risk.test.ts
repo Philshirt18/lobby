@@ -8,6 +8,7 @@ const STRANGER = '0x540e77867a96394eb9df149936617b64e017a295' as const
 
 const held = (over: Partial<HeldItem> = {}): HeldItem => ({
   nonce: 1,
+  token: '0x20c0000000000000000000000000000000000001',
   amount: '5000000',
   originator: STRANGER,
   memo: null,
@@ -84,6 +85,18 @@ describe('assess: address poisoning', () => {
 
   it('does not treat a normal amount as dust', () => {
     expect(assess(held({ amount: '1000000' }), ctx()).flags.some((f) => f.code === 'dust')).toBe(false)
+  })
+})
+
+describe('assess: other tokens', () => {
+  it('flags an unsolicited token as medium risk and never matches it to an invoice', () => {
+    const r = assess(
+      held({ token: '0x20c0000000000000000000000000000000000002', memoText: 'INV-7', amount: '250000000' }),
+      ctx({ invoices: [invoice('INV-7', '250000000')] }),
+    )
+    expect(r.flags.some((f) => f.code === 'other_token' && f.severity === 'medium')).toBe(true)
+    expect(r.flags.some((f) => f.code === 'invoice_exact')).toBe(false)
+    expect(r.recommendation).toBe('review')
   })
 })
 

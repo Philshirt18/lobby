@@ -29,7 +29,7 @@ export function App() {
   } else if (!address) {
     body = <Connect />
   } else if (lobby.phase === 'needs-setup') {
-    body = <Setup onDone={lobby.markSetup} />
+    body = <Setup onDone={lobby.markSetup} foreign={lobby.foreign} />
   } else if (lobby.phase === 'loading') {
     body = <div className="quiet"><b>Reading the guest book…</b>Looking up your lobby on the chain.</div>
   } else {

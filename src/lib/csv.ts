@@ -20,7 +20,7 @@ export function decisionLogCsv(state: LobbyState): string {
     const decision = h.status === 'held' ? 'waiting' : h.status === 'approved' ? 'admitted' : 'returned'
     rows.push({
       ts: h.blockedAt,
-      cols: [iso(h.blockedAt), decision, amount(h.amount), TOKEN, h.originator, h.memoText, `${EXPLORER}/tx/${h.txHash}`, h.resolvedTx ? `${EXPLORER}/tx/${h.resolvedTx}` : ''],
+      cols: [iso(h.blockedAt), decision, amount(h.amount), h.token, h.originator, h.memoText, `${EXPLORER}/tx/${h.txHash}`, h.resolvedTx ? `${EXPLORER}/tx/${h.resolvedTx}` : ''],
     })
   }
   for (const c of state.credited) {

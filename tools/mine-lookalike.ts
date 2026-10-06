@@ -1,7 +1,6 @@
-// Demo helper: mines an address that starts and ends like CUSTOMER_ADDRESS, the way a real
-// address-poisoning attacker would. Prints the result and stores it as LOOKALIKE_* in .env.
-import 'dotenv/config'
-import { appendFileSync } from 'node:fs'
+// Demo helper: mines an address that starts and ends like the one you pass, the way a real
+// address-poisoning attacker would. Usage: pnpm mine 0xYourTargetAddress (about 4 minutes on 7 cores for 3+3 characters).
+// Prints a throwaway testnet key and address; nothing is written to disk.
 import os from 'node:os'
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
@@ -12,8 +11,8 @@ const PREFIX = 3
 const SUFFIX = 3
 
 if (isMainThread) {
-  const target = (process.env.CUSTOMER_ADDRESS ?? '').toLowerCase().replace(/^0x/, '')
-  if (target.length !== 40) throw new Error('CUSTOMER_ADDRESS missing in .env')
+  const target = (process.argv[2] ?? '').toLowerCase().replace(/^0x/, '')
+  if (target.length !== 40) throw new Error('Usage: pnpm mine 0xTargetAddress')
   const want = { prefix: target.slice(0, PREFIX), suffix: target.slice(-SUFFIX) }
   const n = Math.max(1, os.cpus().length - 1)
   console.log(`Mining 0x${want.prefix}…${want.suffix} on ${n} threads (about 16.7M tries expected)`)
@@ -24,7 +23,7 @@ if (isMainThread) {
     workers.push(w)
     w.on('message', (m: { key: string; address: string }) => {
       console.log(`Found after ${((Date.now() - t0) / 1000).toFixed(0)}s: ${m.address}`)
-      appendFileSync('.env', `LOOKALIKE_ADDRESS=${m.address}\nLOOKALIKE_KEY=${m.key}\n`)
+      console.log(`key: ${m.key}`)
       workers.forEach((x) => x.terminate())
     })
   }

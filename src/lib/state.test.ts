@@ -111,6 +111,21 @@ describe('reconcileInvoices', () => {
   })
 })
 
+describe('reconcileInvoices: timing', () => {
+  const old: LobbyState = {
+    ...emptyState(),
+    credited: [{ id: 'x', ts: 1_000, txHash: '0x1', from: SENDER, amount: '6000000', memoText: 'INV-1042', block: 1 }],
+  }
+  it('an older payment never settles a newer invoice', () => {
+    const s: LobbyState = { ...old, invoices: [{ id: 'INV-1042', label: '', amount: '5000000', status: 'open', createdAt: 5_000 }] }
+    expect(reconcileInvoices(s)[0].status).toBe('open')
+  })
+  it('a payment just before the invoice (clock drift) still counts', () => {
+    const s: LobbyState = { ...old, invoices: [{ id: 'INV-1042', label: '', amount: '5000000', status: 'open', createdAt: 1_010 }] }
+    expect(reconcileInvoices(s)[0].status).toBe('paid')
+  })
+})
+
 describe('isPrecompile', () => {
   it('recognises protocol addresses', () => {
     expect(isPrecompile('0xfeec000000000000000000000000000000000000')).toBe(true)

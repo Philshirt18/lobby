@@ -6,7 +6,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { ABI, GUARD, REGISTRY, TOKEN, chain, makePublicClient, rpcTransport } from '../src/lib/network'
 import { FIXTURES } from '../src/lib/fixtures'
 import { admit, fundFromFaucet, preflight, sendPayment, setupLobby, turnAway } from '../src/lib/actions'
-import { fetchActivityChunked, findSetup } from '../src/lib/indexer'
+import { fetchActivityChunked, findHistoryStart, readPolicy } from '../src/lib/indexer'
 import { applyActivity, emptyState } from '../src/lib/state'
 import { assess } from '../src/lib/risk'
 import { toUnits } from '../src/lib/format'
@@ -45,12 +45,19 @@ const { policyId, block } = await setupLobby(owner, pub)
 setupBlock = block
 check('setup creates a policy and sets the receive policy', policyId > 0n, `policy ${policyId} at block ${block}`)
 
-let found = await findSetup(pub, me, await pub.getBlockNumber())
-for (let i = 0; i < 10 && !found; i++) {
-  await new Promise((r) => setTimeout(r, 1500)) // the log index can trail the head
-  found = await findSetup(pub, me, await pub.getBlockNumber())
+let policy = await readPolicy(pub, me)
+for (let i = 0; i < 10 && policy.state !== 'mine'; i++) {
+  await new Promise((r) => setTimeout(r, 1500))
+  policy = await readPolicy(pub, me)
 }
-check('findSetup recovers the policy on a fresh device', found?.policyId === String(policyId) && found.block === Number(block))
+check('readPolicy finds the lobby straight from the registry', policy.state === 'mine' && policy.policyId === String(policyId))
+let start = await findHistoryStart(pub, me, await pub.getBlockNumber())
+for (let i = 0; i < 10 && start !== Number(block); i++) {
+  await new Promise((r) => setTimeout(r, 1500)) // the log index can trail the head
+  start = await findHistoryStart(pub, me, await pub.getBlockNumber())
+}
+check('findHistoryStart returns the block of the first setup', start === Number(block))
+check('a stranger account has no lobby', (await readPolicy(pub, FIXTURES.newcomer.address)).state === 'none')
 
 check('preflight: stranger would be held', (await preflight(pub, FIXTURES.newcomer.address, me)).outcome === 'held')
 

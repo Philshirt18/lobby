@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Address } from 'viem'
-import { fetchActivityChunked, findSetup, syncFrom, type SetupInfo } from '../lib/indexer'
+import { fetchActivityChunked, findHistoryStart, readPolicy, syncFrom, type SetupInfo } from '../lib/indexer'
 import { applyActivity, emptyState } from '../lib/state'
 import { loadState, saveState } from '../lib/store'
 import type { LobbyState } from '../lib/types'
@@ -17,6 +17,7 @@ export function useLobby(owner: Address | undefined) {
   const [phase, setPhase] = useState<Phase>('loading')
   const [head, setHead] = useState<number | null>(null)
   const [online, setOnline] = useState(true)
+  const [foreign, setForeign] = useState<string | null>(null)
   const ref = useRef(state)
   const running = useRef(false)
   const searched = useRef(false)
@@ -53,15 +54,17 @@ export function useLobby(owner: Address | undefined) {
       const tip = await pub.getBlockNumber()
       let st = ref.current
       if (!st.setup) {
-        // A fresh device: walk back through the registry's events once, then only look at recent blocks.
-        const found = await findSetup(pub, owner, tip, searched.current ? 2_000n : 2_000_000n)
-        searched.current = true
-        if (!found) {
+        // A fresh device: the registry tells us whether this account has a lobby, and whose it is.
+        const policy = await readPolicy(pub, owner)
+        if (policy.state !== 'mine') {
+          setForeign(policy.state === 'foreign' ? policy.authority : null)
           setPhase('needs-setup')
           setOnline(true)
           return
         }
-        st = { ...st, setup: found, cursor: null }
+        const block = searched.current ? Number(tip) - 2_000 : await findHistoryStart(pub, owner, tip)
+        searched.current = true
+        st = { ...st, setup: { policyId: policy.policyId, block }, cursor: null }
       }
       const act = await fetchActivityChunked(pub, owner, syncFrom(st.cursor, st.setup!.block), tip)
       // The user may have acted while we waited for the network: merge onto the latest state, not the one we started with.
@@ -101,5 +104,5 @@ export function useLobby(owner: Address | undefined) {
     [update],
   )
 
-  return { state, phase, head, online, update, refresh: sync, markSetup }
+  return { state, phase, head, online, foreign, update, refresh: sync, markSetup }
 }

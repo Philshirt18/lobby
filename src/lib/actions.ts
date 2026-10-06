@@ -136,3 +136,15 @@ export async function setGuest(w: Wallet, pub: Pub, policyId: bigint, address: A
     { to: REGISTRY, data: encodeFunctionData({ abi: ABI.registry, functionName: 'modifyPolicyWhitelist', args: [policyId, address, allowed] }) },
   ])
 }
+
+/** Several guests on or off the list in one atomic transaction (one signature). */
+export async function setGuests(w: Wallet, pub: Pub, policyId: bigint, addresses: Address[], allowed: boolean): Promise<Hex> {
+  return sendBatch(
+    w,
+    pub,
+    addresses.map((a) => ({
+      to: REGISTRY,
+      data: encodeFunctionData({ abi: ABI.registry, functionName: 'modifyPolicyWhitelist', args: [policyId, a, allowed] }),
+    })),
+  )
+}

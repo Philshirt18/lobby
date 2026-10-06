@@ -1,6 +1,6 @@
 import type { Address, Hex } from 'viem'
 import { ReceivePolicyReceipt } from 'viem/tempo'
-import { GUARD } from './network'
+import { GUARD, TOKEN } from './network'
 import { memoToText } from './memo'
 import type { Activity, Counterparty, Credited, HeldItem, Invoice, LobbyState } from './types'
 
@@ -13,14 +13,21 @@ export function isPrecompile(a: string): boolean {
   return /^0x[0-9a-f]{4}0{36}$/i.test(a)
 }
 
-/** Settle every open invoice that has a matching credited or admitted payment. */
+/** Browser and chain clocks drift a little; a payment may count if it is at most this many seconds older than the invoice. */
+const CLOCK_SLACK = 30
+
+/**
+ * Settle every open invoice that has a matching credited or admitted payment. Only payments that came
+ * after the invoice was created count: an old payment must never settle a new invoice.
+ */
 export function reconcileInvoices(state: LobbyState): Invoice[] {
   return state.invoices.map((inv) => {
     if (inv.status === 'paid') return inv
     const need = BigInt(inv.amount)
-    const direct = state.credited.find((c) => c.memoText === inv.id && BigInt(c.amount) >= need)
+    const since = inv.createdAt - CLOCK_SLACK
+    const direct = state.credited.find((c) => c.memoText === inv.id && BigInt(c.amount) >= need && c.ts >= since)
     if (direct) return { ...inv, status: 'paid' as const, paidTx: direct.txHash }
-    const admitted = state.held.find((h) => h.status === 'approved' && h.memoText === inv.id && BigInt(h.amount) >= need)
+    const admitted = state.held.find((h) => h.status === 'approved' && h.token === TOKEN && h.memoText === inv.id && BigInt(h.amount) >= need && h.blockedAt >= since)
     if (admitted) return { ...inv, status: 'paid' as const, paidTx: admitted.resolvedTx }
     return inv
   })
@@ -35,6 +42,7 @@ export function applyActivity(state: LobbyState, act: Activity, owner: Address):
     const memo = (r.memo ?? null) as Hex | null
     held.push({
       nonce: b.nonce,
+      token: r.token.toLowerCase() as Address,
       amount: b.amount.toString(),
       originator: r.originator.toLowerCase() as Address,
       memo,

@@ -263,3 +263,7 @@ form.add.stack label { flex: none; }
 .explainer p { margin: 0 0 8px; }
 .explainer ol { margin: 0; padding-left: 20px; color: var(--ink-2); }
 .explainer li { margin: 2px 0; }
+
+.brand { display: flex; align-items: center; gap: 18px; }
+.brand .mark { width: 76px; height: 76px; flex: none; }
+@media (max-width: 520px) { .brand { gap: 12px; } .brand .mark { width: 52px; height: 52px; } }

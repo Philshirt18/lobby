@@ -17,11 +17,17 @@ export function Masthead({ route, account, online, head, syncing }: Props) {
   return (
     <header className="mast">
       <div className="mast-row">
-        <div>
-          <h1 className="wordmark">
-            Lobby<i>.</i>
-          </h1>
-          <p className="tagline">Front desk for incoming payments. Strangers wait here.</p>
+        <div className="brand">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcSet="/logo-mark-light.png" />
+            <img className="mark" src="/logo-mark.png" alt="" width="64" height="64" />
+          </picture>
+          <div>
+            <h1 className="wordmark">
+              Lobby<i>.</i>
+            </h1>
+            <p className="tagline">Front desk for incoming payments. Strangers wait here.</p>
+          </div>
         </div>
         <div className="status">
           {account ? (

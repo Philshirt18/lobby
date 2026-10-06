@@ -1,0 +1,28 @@
+{
+  "name": "lobby",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "setup": "tsx scripts/setup.ts",
+    "attack": "tsx scripts/attack.ts",
+    "check": "tsc --noEmit",
+    "seed": "tsx scripts/seed.ts",
+    "mine": "tsx scripts/mine-lookalike.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "dotenv": "^18.0.5",
+    "hono": "^4.13.13",
+    "viem": "^2.57.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

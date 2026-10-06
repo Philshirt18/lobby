@@ -4,26 +4,33 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "start": "tsx src/server.ts",
-    "setup": "tsx scripts/setup.ts",
-    "attack": "tsx scripts/attack.ts",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
     "check": "tsc --noEmit",
-    "seed": "tsx scripts/seed.ts",
-    "mine": "tsx scripts/mine-lookalike.ts",
-    "reset": "sh scripts/reset-demo.sh"
+    "e2e": "tsx tools/e2e.ts",
+    "mine": "tsx tools/mine-lookalike.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^2.1.3",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
+    "@tanstack/react-query": "^5.104.1",
+    "accounts": "^0.19.1",
     "dotenv": "^18.0.5",
-    "hono": "^4.13.13",
-    "viem": "^2.57.3"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "viem": "^2.57.3",
+    "wagmi": "^3.7.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
   }
 }

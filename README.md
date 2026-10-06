@@ -6,7 +6,7 @@ account, there is no server, and nobody holds your keys.
 
 > Built for the Colosseum **Crypto World's Fair** hackathon (Tempo track). Runs on the Tempo testnet.
 
-**Live demo:** _(link added after deployment)_ · **Demo video:** _(link added after recording)_
+**Live demo:** https://lobby-iota-three.vercel.app · **Source:** https://github.com/Philshirt18/lobby · **Demo video:** _(link added after recording)_
 
 ## The problem
 

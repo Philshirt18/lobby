@@ -129,3 +129,10 @@ export async function fundFromFaucet(rpcUrl: string, address: Address): Promise<
   const json = (await res.json()) as { error?: { message: string } }
   if (json.error) throw new Error(`Faucet: ${json.error.message}`)
 }
+
+/** Put an address on (or take it off) the on-chain guest list. Whitelisted senders are credited directly. */
+export async function setGuest(w: Wallet, pub: Pub, policyId: bigint, address: Address, allowed: boolean): Promise<Hex> {
+  return sendBatch(w, pub, [
+    { to: REGISTRY, data: encodeFunctionData({ abi: ABI.registry, functionName: 'modifyPolicyWhitelist', args: [policyId, address, allowed] }) },
+  ])
+}

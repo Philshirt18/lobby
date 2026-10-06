@@ -10,6 +10,7 @@ import { fetchActivityChunked, findSetup } from '../src/lib/indexer'
 import { applyActivity, emptyState } from '../src/lib/state'
 import { assess } from '../src/lib/risk'
 import { toUnits } from '../src/lib/format'
+import { paymentStatus } from '../src/lib/track'
 
 const rpc = chain.rpcUrls.default.http[0]
 const pub = makePublicClient(rpc)
@@ -54,11 +55,12 @@ check('findSetup recovers the policy on a fresh device', found?.policyId === Str
 check('preflight: stranger would be held', (await preflight(pub, FIXTURES.newcomer.address, me)).outcome === 'held')
 
 // Acme pays INV-1 while not yet on the whitelist -> held; then it becomes a guest.
-await sendPayment(wallet(FIXTURES.acme.key), pub, me, toUnits(1), 'INV-1')
-await sendPayment(wallet(FIXTURES.newcomer.key), pub, me, toUnits(250), 'INV-2')
-await sendPayment(wallet(FIXTURES.impostor.key), pub, me, toUnits(0.01), '')
+const tx1 = await sendPayment(wallet(FIXTURES.acme.key), pub, me, toUnits(1), 'INV-1')
+const tx2 = await sendPayment(wallet(FIXTURES.newcomer.key), pub, me, toUnits(250), 'INV-2')
+const txImp = await sendPayment(wallet(FIXTURES.impostor.key), pub, me, toUnits(0.01), '')
 
 await sync((s) => s.held.length >= 3)
+check('sender tracking: payment is reported as waiting', (await paymentStatus(pub, tx2, me, FIXTURES.newcomer.address)).stage === 'waiting')
 check('three payments are held', state.held.filter((h) => h.status === 'held').length === 3)
 
 const ctx = (s: typeof state) => ({
@@ -81,10 +83,21 @@ await admit(owner, pub, byRef('INV-2'), { remember: true, policyId })
 await turnAway(owner, pub, impostor)
 await admit(owner, pub, byRef('INV-1'), { remember: false, policyId })
 
-state = applyActivity(state, await fetchActivityChunked(pub, me, block, await pub.getBlockNumber()), me)
+await sync((s) => s.held.every((h) => h.status !== 'held'))
 const status = (ref: string) => state.held.find((h) => h.memoText === ref)?.status
 check('admitted payment shows as approved', status('INV-2') === 'approved' && status('INV-1') === 'approved')
 check('impostor shows as returned', state.held.find((h) => h.originator === FIXTURES.impostor.address.toLowerCase())?.status === 'returned')
+const settle = async (hash: `0x${string}`, sender: `0x${string}`) => {
+  for (let i = 0; i < 10; i++) {
+    const st = await paymentStatus(pub, hash, me, sender)
+    if (st.stage !== 'waiting') return st.stage
+    await new Promise((r) => setTimeout(r, 1500))
+  }
+  return 'waiting'
+}
+check('sender tracking: admitted payment is reported as admitted', (await settle(tx2, FIXTURES.newcomer.address)) === 'admitted')
+check('sender tracking: turned-away payment is reported as returned', (await settle(txImp, FIXTURES.impostor.address)) === 'returned')
+void tx1
 check('invoice INV-2 is settled', state.invoices.find((i) => i.id === 'INV-2')?.status === 'paid')
 
 // Admit-and-remember whitelisted the newcomer in the same transaction: the next payment goes straight through.
